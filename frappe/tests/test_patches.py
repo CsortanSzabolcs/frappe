@@ -90,6 +90,27 @@ class TestPatches(IntegrationTestCase):
 
 		self.assertGreaterEqual(finished_patches, len(all_patches))
 
+	def test_run_single_restores_developer_mode(self):
+		self.addCleanup(setattr, frappe.conf, "developer_mode", frappe.conf.developer_mode)
+		frappe.conf.developer_mode = 1
+		seen = []
+
+		def execute_patch(*args):
+			seen.append(frappe.conf.developer_mode)
+			return True
+
+		with patch.object(patch_handler, "execute_patch", side_effect=execute_patch):
+			patch_handler.run_single("frappe.patches.test_patch", force=True)
+		self.assertEqual(seen, [0])
+		self.assertEqual(frappe.conf.developer_mode, 1)
+
+		with (
+			patch.object(patch_handler, "execute_patch", side_effect=frappe.ValidationError),
+			self.assertRaises(frappe.ValidationError),
+		):
+			patch_handler.run_single("frappe.patches.test_patch", force=True)
+		self.assertEqual(frappe.conf.developer_mode, 1)
+
 
 class TestNeverSkipPatches(IntegrationTestCase):
 	NEVER_SKIP = "app.module.critical_patch"
