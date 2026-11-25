@@ -40,11 +40,7 @@ class OAuthWebRequestValidator(RequestValidator):
 		# Is the client allowed to use the supplied redirect_uri? i.e. has
 		# the client previously registered this EXACT redirect uri.
 
-		redirect_uris = (
-			cstr(frappe.get_cached_value("OAuth Client", client_id, "redirect_uris"))
-			.strip()
-			.split(get_url_delimiter())
-		)
+		redirect_uris = cstr(frappe.get_cached_value("OAuth Client", client_id, "redirect_uris")).split()
 
 		if redirect_uri in redirect_uris:
 			return True

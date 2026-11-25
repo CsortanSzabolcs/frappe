@@ -4,6 +4,7 @@ import frappe
 from frappe.integrations.doctype.oauth_client.oauth_client import delete_unused_dynamic_clients
 from frappe.integrations.oauth2 import register_client
 from frappe.integrations.utils import OAuth2DynamicClientMetadata, create_new_oauth_client
+from frappe.oauth import OAuthWebRequestValidator
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_to_date, now_datetime
 
@@ -29,6 +30,17 @@ class TestOAuthClient(IntegrationTestCase):
 
 		self.assertTrue(client.is_dynamic_client)
 		self.assertEqual(client.token_endpoint_auth_method, "Client Secret Basic")
+
+	def test_dynamic_client_accepts_each_registered_redirect_uri(self):
+		redirect_uris = ["https://example.com/oauth/callback", "https://example.org/oauth/callback"]
+		client = create_new_oauth_client(
+			OAuth2DynamicClientMetadata(client_name="Test Dynamic Client", redirect_uris=redirect_uris)
+		)
+		validator = OAuthWebRequestValidator()
+
+		for redirect_uri in redirect_uris:
+			self.assertTrue(validator.validate_redirect_uri(client.client_id, redirect_uri, None))
+		self.assertFalse(validator.validate_redirect_uri(client.client_id, "https://example.net/", None))
 
 	def test_deletes_unused_dynamic_client_after_grace_period(self):
 		client = self.create_dynamic_client()
